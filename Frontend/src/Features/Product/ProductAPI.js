@@ -40,9 +40,13 @@ export function fetchAllProducts({ filter, sort, page, searchParameter ,admin}) 
 console.log(`${BASE_URL}/products?${queryString}`)
   return new Promise(async (resolve, reject) => {
     try {
+      console.log('Fetching products with query:', queryString);
       const response = await axios.get(`${BASE_URL}/products?${queryString}`);
-      resolve(response.data.data);
+      console.log('Products response:', response.data);
+      const { totalProducts, products } = response.data.data;
+      resolve({ totalProducts, products });
     } catch (error) {
+      console.error('Error fetching products:', error);
       errorMessageToastNotificaton();
       reject(error.message);
     }

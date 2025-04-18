@@ -11,7 +11,7 @@ import Cookies from "js-cookie";
 const initialState = {
   error: null,
   status: "idle",
-  loggedInUser: { userId: null, role: null },
+  loggedInUser: { _id: null, role: null },
   isUserRegistered: false,
   role: null,
   mailSent: false,
@@ -32,9 +32,9 @@ export const registerUserAsync = createAsyncThunk(
 
 export const loginUserAsync = createAsyncThunk(
   "auth/loginUser",
-  async ({ email,password ,navigate }) => {
+  async ({ email, password }) => {
     try {
-      const response = await loginUser(email, password,navigate);
+      const response = await loginUser(email, password);
       return response;
     } catch (error) {
       throw error;
@@ -87,7 +87,7 @@ const AuthSlice = createSlice({
     },
     setLoggedInUserState(state, action) {
       state.loggedInUser = {
-        userId: action.payload.userId,
+        _id: action.payload._id,
         role: action.payload.role,
       };
     },
@@ -115,12 +115,22 @@ const AuthSlice = createSlice({
       })
       .addCase(loginUserAsync.fulfilled, (state, action) => {
         state.status = "idle";
-        if (Cookies.get("loggedInUserInfo")) {
-          const user = JSON.parse(Cookies.get("loggedInUserInfo"));
+        state.error = null;
+        
+        console.log('Full login response:', action.payload);
+        
+        // Get user data from response
+        const userData = action.payload.data;
+        
+        if (userData && userData._id) {
+          // Update user state
           state.loggedInUser = {
-            userId: user.userId,
-            role: user.role,
+            _id: userData._id,
+            role: userData.role
           };
+          console.log('Updated user state:', state.loggedInUser);
+        } else {
+          console.error('Login response missing user data:', action.payload);
         }
       })
       .addCase(loginUserAsync.rejected, (state, action) => {
@@ -134,7 +144,7 @@ const AuthSlice = createSlice({
         state.status = "loading";
       })
       .addCase(logoutUserAsync.fulfilled, (state, action) => {
-        state.loggedInUser = { userId: null, role: null };
+        state.loggedInUser = { _id: null, role: null };
         state.status = "idle";
       })
       .addCase(logoutUserAsync.rejected, (state, action) => {

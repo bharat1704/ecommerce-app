@@ -55,8 +55,21 @@ export function LoginForm() {
 
   const user = useSelector(selectLoggedInUser);
 
-  function formSubmitHandler({ email, password }) {
-    dispatch(loginUserAsync({ email, password ,navigate}));
+  async function formSubmitHandler({ email, password }) {
+    try {
+      const response = await dispatch(loginUserAsync({ email, password })).unwrap();
+      console.log('Login response:', response);
+      console.log('Full login response in form:', response);
+      
+      // Check if login was successful
+      if (response.success && response.data && response.data._id) {
+        navigate('/');
+      } else {
+        console.error('Invalid login response format:', response);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+    }
   }
 
   

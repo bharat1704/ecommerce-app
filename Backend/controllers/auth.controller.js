@@ -51,69 +51,96 @@ const registerUser = asyncHandler(async (req, res, next) => {
 });
 
 const loginUser = asyncHandler(async (req, res, next) => {
-  const { email, password } = req.body;
+    console.log('Login attempt received:', req.body);
+    const { email, password } = req.body;
 
-  if (!email) {
-    return next(new ApiError(400, "Email is required"));
-  }
+    if (!email) {
+      console.log('Login failed: Email missing');
+      return next(new ApiError(400, "Email is required"));
+    }
 
-  if (!password) {
-    return next(new ApiError(400, "Password is required"));
-  }
+    if (!password) {
+      console.log('Login failed: Password missing');
+      return next(new ApiError(400, "Password is required"));
+    }
 
-  const user = await User.findOne({ email });
+    console.log('Looking for user with email:', email);
+    const user = await User.findOne({ email });
 
-  if (!user) {
-    return next(new ApiError(401, "Invalid Credentials"));
-  }
+    if (!user) {
+      console.log('Login failed: User not found for email:', email);
+      return next(new ApiError(401, "Invalid Credentials"));
+    }
 
-  const isPasswordCorrect = await user.isPasswordCorrect(password);
+    console.log('User found, checking password...');
+    const isPasswordCorrect = await user.isPasswordCorrect(password);
+    console.log('Password check result:', isPasswordCorrect);
 
-  if (!isPasswordCorrect) {
-    return next(new ApiError(401, "Invalid Credentials"));
-  }
+    if (!isPasswordCorrect) {
+      console.log('Login failed: Incorrect password for user:', email);
+      return next(new ApiError(401, "Invalid Credentials"));
+    }
 
-  const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
-    user._id
-  );
+    console.log('Generating tokens for user:', user._id);
+    const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
+      user._id
+    );
+    console.log('Tokens generated successfully');
 
-  const loggedInUser = await User.findById(user._id).select("role _id");
-  return res
-    .status(200)
+    const loggedInUser = await User.findById(user._id).select("role _id");
+    console.log('User data retrieved:', { _id: loggedInUser._id, role: loggedInUser.role });
+    const userData = {
+      _id: loggedInUser._id,
+      role: loggedInUser.role
+    };
 
-    .cookie("accessToken", accessToken, {
+    console.log('Preparing to set cookies and send response');
+
+    
+    // Set cookie options based on environment
+    const cookieOptions = {
       httpOnly: true,
-      secure: true,
-      path: "/",
-      maxAge: process.env.ACCESS_TOKEN_EXPIRY,
-      sameSite: "None",
-      domain: process.env.CLIENT_URL,
-      path: "/",
-    })
-    .cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: true,
-      path: "/",
-      maxAge: process.env.REFRESH_TOKEN_EXPIRY,
-      sameSite: "None",
-      domain: process.env.CLIENT_URL,
-      path: "/",
-    })
-    .cookie(
-      "loggedInUserInfo",
-      JSON.stringify({ role: loggedInUser.role, userId: loggedInUser._id }),
-      {
-        httpOnly: false,
-        path: "/",
-        secure: true,
-        maxAge: process.env.REFRESH_TOKEN_EXPIRY,
-        sameSite: "None",
-        domain: process.env.CLIENT_URL,
-        path: "/",
-      }
-    )
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      sameSite: 'lax',
+      domain: process.env.NODE_ENV === 'production' ? process.env.DOMAIN : 'localhost'
+    };
 
-    .json(new ApiResponse(200, "User logged in successfully", null));
+    const finalResponse = {
+      success: true,
+      message: "User logged in successfully",
+      data: userData
+    };
+    console.log('Sending login response:', finalResponse);
+
+    return res
+      .status(200)
+      .cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: false,
+        path: "/",
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        sameSite: "Lax"
+      })
+      .cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: false,
+        path: "/",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        sameSite: "Lax"
+      })
+      .cookie(
+        "loggedInUserInfo",
+        JSON.stringify(userData),
+        {
+          httpOnly: false,
+          path: "/",
+          secure: false,
+          maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+          sameSite: "Lax"
+        }
+      )
+      .json(finalResponse);
 });
 
 const logoutUser = asyncHandler(async (req, res, next) => {

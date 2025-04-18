@@ -5,10 +5,20 @@ const {ApiError} = require("../utils/ApiError")
 const {ApiResponse} = require("../utils/ApiResponse")
 
 const fetchAllCategories = asyncHandler(async(req,res,next)=>{
-    
-        const categories = await Category.find()
-        return res.status(200).json(new ApiResponse(200,"Successfully fetched Categories", categories))
-      
+    try {
+        console.log('Fetching all categories...');
+        const categories = await Category.find().select('label _id');
+        console.log(`Found ${categories.length} categories`);
+        
+        return res.status(200).json({
+            success: true,
+            message: "Categories fetched successfully",
+            data: categories
+        });
+    } catch (error) {
+        console.error('Error fetching categories:', error);
+        return next(new ApiError(500, "Error fetching categories"));
+    }
 })
 
 const addCategory = asyncHandler((async(req,res,next)=>{

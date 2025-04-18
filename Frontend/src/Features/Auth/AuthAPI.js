@@ -42,26 +42,21 @@ export function registerUser(email, password) {
   });
 }
 
-export function loginUser(email, password,navigate) {
- 
+export function loginUser(email, password) {
   return new Promise(async (resolve, reject) => {
     try {
       const response = await axios.post(
         `${BASE_URL}/auth/login`,
-        {
-          email,
-          password,
-        },
-        {
-          withCredentials: true, // Ensure cookies are included
-        }
+        { email, password },
+        { withCredentials: true }
       );
-      console.log({response})
-      if (response.data.success === true) {
-        successMessageToastNotificaton(response.data.message);
-        navigate("/")
+      
+      if (response.data) {
+        successMessageToastNotificaton(response.data.message || 'Login successful');
+        resolve(response.data);
+      } else {
+        reject(new Error('Login failed'));
       }
-      resolve(response.data);
     } catch (error) {
       console.log("Error while login",{error})
       if (error.response) {

@@ -5,8 +5,20 @@ const {ApiError} = require("../utils/ApiError")
 const {ApiResponse} = require("../utils/ApiResponse")
 
 const fetchAllBrands = asyncHandler(async(req,res,next)=>{
-        const brands = await Brand.find()
-        return res.status(200).json(new ApiResponse(200,"Successfully fetched Brands",brands))
+    try {
+        console.log('Fetching all brands...');
+        const brands = await Brand.find().select('label _id');
+        console.log(`Found ${brands.length} brands`);
+        
+        return res.status(200).json({
+            success: true,
+            message: "Brands fetched successfully",
+            data: brands
+        });
+    } catch (error) {
+        console.error('Error fetching brands:', error);
+        return next(new ApiError(500, "Error fetching brands"));
+    }
 })
 
 const addBrand = asyncHandler((async(req,res,next)=>{
